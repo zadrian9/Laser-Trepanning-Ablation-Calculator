@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#090d16"/>
+    </radialGradient>
+    <linearGradient id="beamGrad" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.9"/>
+      <stop offset="45%" stop-color="#818cf8" stop-opacity="0.95"/>
+      <stop offset="70%" stop-color="#c084fc" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#f43f5e" stop-opacity="1"/>
+    </linearGradient>
+    <radialGradient id="focalGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="30%" stop-color="#f43f5e" stop-opacity="0.9"/>
+      <stop offset="70%" stop-color="#8b5cf6" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="nozzleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#475569"/>
+      <stop offset="30%" stop-color="#94a3b8"/>
+      <stop offset="50%" stop-color="#cbd5e1"/>
+      <stop offset="70%" stop-color="#64748b"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
+    <linearGradient id="partGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#334155"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <filter id="laserGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur1"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="15" result="blur2"/>
+      <feMerge>
+        <feMergeNode in="blur2"/>
+        <feMergeNode in="blur1"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
+  <rect width="508" height="508" x="2" y="2" rx="110" fill="none" stroke="#334155" stroke-width="3" stroke-opacity="0.6"/>
+
+  <circle cx="256" cy="256" r="180" fill="none" stroke="#334155" stroke-width="1.5" stroke-dasharray="4,6" opacity="0.4"/>
+  <circle cx="256" cy="256" r="110" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="2,4" opacity="0.25"/>
+  <line x1="256" y1="56" x2="256" y2="456" stroke="#475569" stroke-width="1.5" stroke-dasharray="6,6" opacity="0.4"/>
+  <line x1="56" y1="256" x2="456" y2="256" stroke="#475569" stroke-width="1.5" stroke-dasharray="6,6" opacity="0.4"/>
+
+  <ellipse cx="256" cy="370" rx="95" ry="32" fill="none" stroke="#06b6d4" stroke-width="2.5" stroke-dasharray="8,6" opacity="0.75"/>
+  <ellipse cx="256" cy="370" rx="95" ry="32" fill="#06b6d4" fill-opacity="0.05"/>
+
+  <path d="M 70,350 L 160,350 L 195,430 L 70,430 Z" fill="url(#partGrad)" stroke="#475569" stroke-width="2"/>
+  <path d="M 442,350 L 352,350 L 317,430 L 442,430 Z" fill="url(#partGrad)" stroke="#475569" stroke-width="2"/>
+  <line x1="60" y1="350" x2="452" y2="350" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4,4"/>
+
+  <g filter="url(#laserGlow)">
+    <path d="M 235,140 L 277,140 L 290,325 L 305,370 L 275,370 L 270,325 Z" fill="url(#beamGrad)" opacity="0.95"/>
+    <polygon points="270,325 290,325 305,370 275,370" fill="#f43f5e" opacity="0.9"/>
+    <path d="M 277,140 L 235,140 L 222,325 L 207,370 L 237,370 L 242,325 Z" fill="#38bdf8" opacity="0.2"/>
+  </g>
+
+  <circle cx="282" cy="335" r="32" fill="url(#focalGlow)"/>
+  <circle cx="282" cy="335" r="7" fill="#ffffff"/>
+  <circle cx="290" cy="370" r="18" fill="url(#focalGlow)" opacity="0.8"/>
+  <circle cx="290" cy="370" r="4" fill="#ffffff"/>
+
+  <path d="M 180,50 L 332,50 L 332,95 L 285,150 L 227,150 L 180,95 Z" fill="url(#nozzleGrad)" stroke="#64748b" stroke-width="2.5"/>
+  <ellipse cx="256" cy="150" rx="30" ry="8" fill="#0f172a" stroke="#94a3b8" stroke-width="2"/>
+  <line x1="256" y1="50" x2="256" y2="148" stroke="#ffffff" stroke-width="1" opacity="0.4"/>
+
+  <line x1="256" y1="150" x2="290" y2="370" stroke="#f43f5e" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.9"/>
+  <line x1="256" y1="150" x2="222" y2="370" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>
+
+  <path d="M 283,230 A 60 60 0 0 1 292,270" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
+  <text x="304" y="255" fill="#f59e0b" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="700">θ</text>
+  <line x1="262" y1="335" x2="302" y2="335" stroke="#ffffff" stroke-width="1.5" opacity="0.8"/>
+</svg>

@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)">
+  <title>Laser Trepanning &amp; Ablation Calculator</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon-180x180.png">
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem('trepan_theme');
+        var theme = (saved === 'light' || saved === 'dark')
+          ? saved
+          : (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.style.colorScheme = theme;
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.documentElement.style.colorScheme = 'dark';
+      }
+    })();
+  </script>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <!-- Header Bar -->
+  <header class="app-header">
+    <div class="header-left">
+      <img src="./icon.svg" alt="Laser Trepanning Calculator Icon" width="40" height="40" class="app-icon">
+      <div>
+        <h1 class="app-title">Laser Trepanning &amp; Ablation Calculator</h1>
+        <p class="app-subtitle">Diffraction-Limited Optics &amp; 3D Precession Drilling Simulator</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <button type="button" id="btnInstallPwa" class="btn btn-primary" hidden title="Install Application for Offline Use">
+        Install App
+      </button>
+      <button type="button" id="btnOpenGuide" class="btn btn-outline" title="View Instructions and Technical Guide">
+        Technical Guide
+      </button>
+      <button type="button" id="btnExportConfig" class="btn btn-outline" title="Export Current Settings as JSON">
+        Export Config
+      </button>
+      <button type="button" id="btnImportConfig" class="btn btn-outline" title="Import Settings from JSON">
+        Import
+      </button>
+      <input type="file" id="fileImportInput" accept=".json,application/json" hidden>
+      <button type="button" id="btnToggleTheme" class="btn btn-icon" aria-label="Toggle Light or Dark Theme" aria-pressed="false" title="Toggle Light/Dark Theme">
+        <span id="themeIcon" aria-hidden="true">☀️</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Global Warning Banners -->
+  <div id="warnWavelengthMismatch" class="alert-banner alert-warning" role="alert" hidden></div>
+  <div id="warnArgesSquare" class="alert-banner alert-danger" role="alert" hidden></div>
+
+  <!-- Main Grid Workspace -->
+  <div class="app-layout">
+    <!-- Left Column: Controls & Parameter Inputs -->
+    <aside class="sidebar" aria-label="Laser and Trepanning Parameters">
+      <!-- Section 1: Equipment & Job Mode -->
+      <section class="card">
+        <h2 class="card-title">1. Equipment &amp; Job Mode</h2>
+        <div class="form-group">
+          <label for="selectLaser">Laser Source</label>
+          <select id="selectLaser" class="form-control"></select>
+        </div>
+
+        <div id="manualLaserGroup" class="manual-subpanel" hidden>
+          <div class="subpanel-title">Manual Laser Specification</div>
+          <div class="input-grid">
+            <div class="form-group">
+              <label for="inputManualLaserWavelength">Wavelength (µm)</label>
+              <input type="number" id="inputManualLaserWavelength" class="form-control" value="0.515" step="0.005" min="0.1" max="20">
+            </div>
+            <div class="form-group">
+              <label for="selectManualLaserColor">Spectral Band</label>
+              <select id="selectManualLaserColor" class="form-control">
+                <option value="IR">IR</option>
+                <option value="Green" selected>Green</option>
+              </select>
+            </div>
+            <div class="form-group full-width">
+              <label for="inputManualLaserPulseWidth">Pulse Width (fs)</label>
+              <input type="number" id="inputManualLaserPulseWidth" class="form-control" value="500" step="10" min="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="selectScanhead">Scanhead Type</label>
+          <select id="selectScanhead" class="form-control"></select>
+        </div>
+
+        <div id="manualScanheadGroup" class="manual-subpanel" hidden>
+          <div class="subpanel-title">Manual Scanhead Specification</div>
+          <div class="input-grid">
+            <div class="form-group">
+              <label for="selectManualScanheadBrand">Kinematics Brand</label>
+              <select id="selectManualScanheadBrand" class="form-control">
+                <option value="Scanlab" selected>Scanlab</option>
+                <option value="Arges">Arges</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="selectManualScanheadColor">Optics Band</label>
+              <select id="selectManualScanheadColor" class="form-control">
+                <option value="IR">IR</option>
+                <option value="Green" selected>Green</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="inputManualScanheadFocalLength">Focal Length (mm)</label>
+              <input type="number" id="inputManualScanheadFocalLength" class="form-control" value="75" step="1" min="1">
+            </div>
+            <div class="form-group">
+              <label for="inputManualScanheadBeamDia">Beam Dia (mm)</label>
+              <input type="number" id="inputManualScanheadBeamDia" class="form-control" value="7" step="0.5" min="0.1">
+            </div>
+            <div class="form-group">
+              <label for="inputManualScanheadTransmission">Transmission (%)</label>
+              <input type="number" id="inputManualScanheadTransmission" class="form-control" value="90" step="1" min="0.1" max="100">
+            </div>
+            <div class="form-group">
+              <label for="inputManualScanheadScanSpeed">Max Scan Speed (Hz)</label>
+              <input type="number" id="inputManualScanheadScanSpeed" class="form-control" value="500" step="10" min="0.1">
+            </div>
+            <div class="form-group">
+              <label for="inputManualScanheadM2">Default M²</label>
+              <input type="number" id="inputManualScanheadM2" class="form-control" value="1.05" step="0.05" min="1">
+            </div>
+            <div class="form-group">
+              <label for="inputManualScanheadMaxAttack">Max Attack (°)</label>
+              <input type="number" id="inputManualScanheadMaxAttack" class="form-control" value="7.5" step="0.5" min="0.1" max="60">
+            </div>
+            <div class="form-group full-width">
+              <label for="inputManualScanheadMaxZTravel">Max Z Travel (µm)</label>
+              <input type="number" id="inputManualScanheadMaxZTravel" class="form-control" value="1000" step="50" min="0">
+            </div>
+          </div>
+        </div>
+
+        <div class="input-grid">
+          <div class="form-group">
+            <label for="selectHoleType">Hole Geometry</label>
+            <select id="selectHoleType" class="form-control"></select>
+          </div>
+          <div class="form-group">
+            <label for="selectDivergenceMode">Beam Divergence</label>
+            <select id="selectDivergenceMode" class="form-control">
+              <option value="current" selected>Current (Accurate)</option>
+              <option value="legacy">Legacy (Excel v5.3)</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: Laser & Process Parameters -->
+      <section class="card">
+        <h2 class="card-title">2. Laser &amp; Process Parameters</h2>
+        <div class="input-grid">
+          <div class="form-group">
+            <label for="inputBasePower">Base Power (W)</label>
+            <input type="number" id="inputBasePower" class="form-control" value="40" step="1" min="0">
+          </div>
+          <div class="form-group">
+            <label for="inputBaseRepRate">Base Rep Rate (kHz)</label>
+            <input type="number" id="inputBaseRepRate" class="form-control" value="200" step="10" min="0.001">
+          </div>
+          <div class="form-group">
+            <label for="inputDivider">Pulse Divider</label>
+            <input type="number" id="inputDivider" class="form-control" value="4" step="1" min="1">
+          </div>
+          <div class="form-group">
+            <label for="inputAttenuator">Attenuator (%)</label>
+            <input type="number" id="inputAttenuator" class="form-control" value="100" step="1" min="0" max="100">
+          </div>
+          <div class="form-group full-width">
+            <label for="inputScanSpeed"><span id="labelScanSpeed">Scan Frequency</span> (<span id="unitScanSpeed">Hz</span>)</label>
+            <input type="number" id="inputScanSpeed" class="form-control" value="50" step="5" min="0.001">
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 3: Target Hole Dimensions -->
+      <section class="card">
+        <h2 class="card-title">3. Target Hole Dimensions</h2>
+        <div class="input-grid">
+          <div class="form-group">
+            <label for="inputEntranceDia" id="labelEntranceDia">Entrance Diameter (µm)</label>
+            <input type="number" id="inputEntranceDia" class="form-control" value="203" step="5" min="0">
+          </div>
+          <div class="form-group">
+            <label for="inputExitDia" id="labelExitDia">Exit Diameter (µm)</label>
+            <input type="number" id="inputExitDia" class="form-control" value="653" step="5" min="0">
+          </div>
+          <div class="form-group">
+            <label for="inputMaterialThick">Material Thickness (µm)</label>
+            <input type="number" id="inputMaterialThick" class="form-control" value="2180" step="50" min="1">
+          </div>
+          <div class="form-group">
+            <label for="inputPartSurfaceZ">Part Surface Z (µm)</label>
+            <input type="number" id="inputPartSurfaceZ" class="form-control" value="0" step="10">
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 4: Scanhead Coordinates & Precession State -->
+      <section class="card">
+        <h2 class="card-title">4. Scanhead Kinematics &amp; States</h2>
+
+        <div class="mode-selector" role="radiogroup" aria-label="State Mode">
+          <label class="radio-label">
+            <input type="radio" name="stateMode" id="radioSingleState" value="single" checked>
+            <span>Single State</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="stateMode" id="radioTransitionState" value="transition">
+            <span>State Transition</span>
+          </label>
+        </div>
+
+        <!-- Coordinates Columns (Start & End) -->
+        <div class="states-grid">
+          <fieldset class="state-column" id="startStateCol" disabled>
+            <legend class="state-badge">Start State</legend>
+            <div class="form-group">
+              <label for="inputStartDia">Scan Dia (µm)</label>
+              <input type="number" id="inputStartDia" class="form-control" value="250" step="10" min="0">
+            </div>
+            <div class="form-group">
+              <label for="inputStartAOI">AOI (°)</label>
+              <input type="number" id="inputStartAOI" class="form-control" value="-6" step="0.5">
+            </div>
+            <div class="form-group">
+              <label for="inputStartZ">Z Focus (µm)</label>
+              <input type="number" id="inputStartZ" class="form-control" value="-1100" step="50">
+            </div>
+          </fieldset>
+
+          <fieldset class="state-column">
+            <legend class="state-badge active">End / Active State</legend>
+            <div class="form-group">
+              <label for="inputEndDia" id="labelScanheadDia">Scan Diameter (µm)</label>
+              <input type="number" id="inputEndDia" class="form-control" value="350" step="10" min="0">
+            </div>
+            <div class="form-group">
+              <label for="inputEndAOI" id="labelScanheadAOI">AOI (°)</label>
+              <input type="number" id="inputEndAOI" class="form-control" value="-7" step="0.5">
+            </div>
+            <div class="form-group">
+              <label for="inputEndZ" id="labelScanheadZ">Z Focus (- toward part, µm)</label>
+              <input type="number" id="inputEndZ" class="form-control" value="-1100" step="50">
+            </div>
+          </fieldset>
+        </div>
+
+        <!-- Interactive Transition Scrubber + Safety Heatmap (shown in transition mode) -->
+        <div id="transitionControlsBox" class="transition-box" hidden>
+          <div class="transition-header">
+            <span>Transition Progress: <strong id="textProgress">0%</strong></span>
+            <div class="transition-actions">
+              <button type="button" id="btnStepBack" class="btn btn-sm btn-outline" title="Step back 10%">-10%</button>
+              <button type="button" id="btnPlayTransition" class="btn btn-sm btn-primary">▶ Play</button>
+              <button type="button" id="btnStepFwd" class="btn btn-sm btn-outline" title="Step forward 10%">+10%</button>
+            </div>
+          </div>
+          <input type="range" id="sliderProgress" class="slider" min="0" max="100" value="0" step="1" aria-label="Transition Progress Percent">
+          <canvas id="canvasSafetyHeatmap" class="safety-heatmap-canvas" height="18" aria-label="Transition mode safety sweep heatmap"></canvas>
+          <div class="heatmap-legend" aria-label="Safety heatmap legend">
+            <span class="legend-chip"><span class="swatch swatch-safe" aria-hidden="true"></span>Safe</span>
+            <span class="legend-chip"><span class="swatch swatch-overcut" aria-hidden="true"></span>Wall Overcut</span>
+            <span class="legend-chip"><span class="swatch swatch-clipping" aria-hidden="true"></span>Nozzle Clipping</span>
+          </div>
+        </div>
+
+        <!-- Scaling & Orbit Kinematics -->
+        <div class="scaling-row">
+          <div class="form-group">
+            <label for="inputJobScaling">Job Scaling</label>
+            <input type="number" id="inputJobScaling" class="form-control" value="1" step="0.05" min="0.01">
+          </div>
+          <div class="form-group">
+            <label for="inputNodeScaling">Node Scaling</label>
+            <input type="number" id="inputNodeScaling" class="form-control" value="1" step="0.05" min="0.01">
+          </div>
+        </div>
+
+        <details class="sub-accordion">
+          <summary class="sub-accordion-title">3D Galvo Phase &amp; Rotation Angles</summary>
+          <div class="input-grid">
+            <div class="form-group">
+              <label for="selectDirection">Orbit Direction</label>
+              <select id="selectDirection" class="form-control">
+                <option value="CCW" selected>CCW</option>
+                <option value="CW">CW</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="inputDistXYRotation">Dist XY Rot (°)</label>
+              <input type="number" id="inputDistXYRotation" class="form-control" value="0" step="5" min="-360" max="360">
+            </div>
+            <div class="form-group">
+              <label for="inputPhase1">Phase 1 (°)</label>
+              <input type="number" id="inputPhase1" class="form-control" value="0" step="5" min="-360" max="360">
+            </div>
+            <div class="form-group">
+              <label for="inputRotation1">Rotation 1 (°)</label>
+              <input type="number" id="inputRotation1" class="form-control" value="0" step="5" min="-360" max="360">
+            </div>
+            <div class="form-group">
+              <label for="inputPhase2">Phase 2 (°)</label>
+              <input type="number" id="inputPhase2" class="form-control" value="0" step="5" min="-360" max="360">
+            </div>
+            <div class="form-group">
+              <label for="inputRotation2">Rotation 2 (°)</label>
+              <input type="number" id="inputRotation2" class="form-control" value="180" step="5" min="-360" max="360">
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <!-- Section 5: Advanced Parameter Overrides -->
+      <details class="card card-accordion">
+        <summary class="card-title">5. Parameter Overrides (Optional)</summary>
+        <p class="text-muted small">Leave blank to inherit equipment presets automatically.</p>
+        <div class="input-grid">
+          <div class="form-group">
+            <label for="overrideM2">M² Factor</label>
+            <input type="number" id="overrideM2" class="form-control" placeholder="Default" step="0.05" min="1">
+          </div>
+          <div class="form-group">
+            <label for="overridePulseWidth">Pulse Width (fs)</label>
+            <input type="number" id="overridePulseWidth" class="form-control" placeholder="Default" value="500" step="25" min="1">
+          </div>
+          <div class="form-group">
+            <label for="overrideFocalLength">Focal Length (mm)</label>
+            <input type="number" id="overrideFocalLength" class="form-control" placeholder="Default" step="5" min="1">
+          </div>
+          <div class="form-group">
+            <label for="overrideBeamDia">Beam Dia (mm)</label>
+            <input type="number" id="overrideBeamDia" class="form-control" placeholder="Default" step="0.5" min="0.1">
+          </div>
+          <div class="form-group">
+            <label for="overrideTransmission">Transmission (%)</label>
+            <input type="number" id="overrideTransmission" class="form-control" placeholder="Default" step="1" min="0.1" max="100">
+          </div>
+          <div class="form-group">
+            <label for="overrideFocusRelZ">Focus Rel Z (µm)</label>
+            <input type="number" id="overrideFocusRelZ" class="form-control" placeholder="0" step="50">
+          </div>
+          <div class="form-group">
+            <label for="overrideNozzleDia">Nozzle Aperture (mm)</label>
+            <input type="number" id="overrideNozzleDia" class="form-control" placeholder="1.0" step="0.1" min="0.01">
+          </div>
+          <div class="form-group">
+            <label for="overrideNozzleWD">Nozzle Working Dist (mm)</label>
+            <input type="number" id="overrideNozzleWD" class="form-control" placeholder="1.4" step="0.1" min="0">
+          </div>
+          <div class="form-group">
+            <label for="overrideNozzleThick">Nozzle Thickness (mm)</label>
+            <input type="number" id="overrideNozzleThick" class="form-control" placeholder="2.0" value="2" step="0.1" min="0">
+          </div>
+          <div class="form-group">
+            <label for="overrideMaxAttack">Max Attack Angle (°)</label>
+            <input type="number" id="overrideMaxAttack" class="form-control" placeholder="Default" step="0.5" min="0.1" max="60">
+          </div>
+          <div class="form-group full-width">
+            <label for="overrideAblationThresh">Ablation Thresh (J/cm²)</label>
+            <input type="number" id="overrideAblationThresh" class="form-control" placeholder="2.0" value="2" step="0.1" min="0.001">
+          </div>
+        </div>
+      </details>
+
+      <!-- Section 6: Z-Lookup & Graph Limit Expansion -->
+      <details class="card card-accordion">
+        <summary class="card-title">6. Z-Lookup &amp; Graph Limits</summary>
+        <div class="input-grid">
+          <div class="form-group">
+            <label for="inputZFromFocus">Z From Focus (µm)</label>
+            <input type="number" id="inputZFromFocus" class="form-control" value="0" step="25">
+          </div>
+          <div class="form-group">
+            <span class="field-label">Ablated Spot @ Z</span>
+            <div id="readoutAblatedAtZ" class="inline-readout">--</div>
+          </div>
+          <div class="form-group">
+            <label for="limitZMin">Graph Z Min (µm)</label>
+            <input type="number" id="limitZMin" class="form-control" value="-500" step="100">
+          </div>
+          <div class="form-group">
+            <label for="limitZMax">Graph Z Max (µm)</label>
+            <input type="number" id="limitZMax" class="form-control" value="1500" step="100">
+          </div>
+          <div class="form-group">
+            <label for="limitRMin">Graph R Min (µm)</label>
+            <input type="number" id="limitRMin" class="form-control" value="-80" step="20">
+          </div>
+          <div class="form-group">
+            <label for="limitRMax">Graph R Max (µm)</label>
+            <input type="number" id="limitRMax" class="form-control" value="120" step="20">
+          </div>
+          <div class="form-group">
+            <label for="selectGraphFitMode">Graph Fit Mode</label>
+            <select id="selectGraphFitMode" class="form-control">
+              <option value="expand" selected>Expand to Fit</option>
+              <option value="exact">Exact Limits</option>
+            </select>
+          </div>
+          <div class="form-group align-end">
+            <button type="button" id="btnResetGraphLimits" class="btn btn-sm btn-outline full-width">Reset Graph Limits</button>
+          </div>
+        </div>
+      </details>
+    </aside>
+
+    <!-- Right Stage: Live Interactive Canvas & Metrics -->
+    <main class="main-stage">
+      <!-- Top Status Bar & Current Kinematic Readout -->
+      <div class="status-bar">
+        <div class="readout-group">
+          <span class="readout-item">Attack Angle θ: <strong id="readoutCurrentAngle">0.00°</strong></span>
+          <span class="readout-item">Z Focus Shift: <strong id="readoutCurrentZShift">0 µm</strong></span>
+          <span class="readout-item">Scan Radius R: <strong id="readoutCurrentRadius">0 µm</strong></span>
+        </div>
+        <div class="badge-group">
+          <span id="badgeEngineBackend" class="status-badge neutral">Engine: Initializing</span>
+          <span id="badgeNozzleClearance" class="status-badge success">✓ Nozzle Clearance OK</span>
+          <span id="badgeWallClearance" class="status-badge success">✓ Hole Wall Within Limit</span>
+        </div>
+      </div>
+
+      <!-- Canvas Card Container -->
+      <section class="canvas-card" aria-label="Interactive Physics Visualizations">
+        <div class="canvas-header">
+          <!-- View Navigation Tabs -->
+          <div class="tab-list" id="canvasTabList" role="tablist" focusgroup="tablist" aria-label="Visualization Charts">
+            <button type="button" id="tabProfile" class="tab-btn active" role="tab" aria-selected="true" aria-controls="panelProfile" tabindex="0" data-tab="profile">
+              Trepanning Cross-Section
+            </button>
+            <button type="button" id="tabTopDown" class="tab-btn" role="tab" aria-selected="false" aria-controls="panelTopDown" tabindex="-1" data-tab="topdown">
+              Multi-Plane 3D Path
+            </button>
+            <button type="button" id="tabIsofluence" class="tab-btn" role="tab" aria-selected="false" aria-controls="panelIsofluence" tabindex="-1" data-tab="isofluence">
+              Isofluence Lines
+            </button>
+            <button type="button" id="tabFluence" class="tab-btn" role="tab" aria-selected="false" aria-controls="panelFluence" tabindex="-1" data-tab="fluence">
+              Focus Energy Distribution
+            </button>
+          </div>
+
+          <!-- Canvas Shared Controls -->
+          <div class="canvas-actions">
+            <span id="crosshairReadout" class="crosshair-readout" aria-live="off">Hover plot for coordinates</span>
+            <button type="button" id="btnOrientation" class="btn btn-sm btn-outline" title="Switch between Vertical Z and Horizontal Z axes">
+              <span id="btnOrientationText">Vertical Z</span>
+            </button>
+            <button type="button" id="btnResetView" class="btn btn-sm btn-outline" title="Reset Zoom and Pan">
+              Reset View
+            </button>
+            <button type="button" id="btnExportPng" class="btn btn-sm btn-outline" title="Export Current Chart as PNG">
+              Export PNG
+            </button>
+            <button type="button" id="btnToggleTable" class="btn btn-sm btn-outline" aria-pressed="false" title="Show or Hide Numeric Summary Table">
+              Data Table
+            </button>
+          </div>
+        </div>
+
+        <!-- Canvases -->
+        <div class="canvas-viewport">
+          <!-- Tab 1: Profile Cross-Section -->
+          <div id="panelProfile" class="canvas-tab-panel active" role="tabpanel" aria-labelledby="tabProfile">
+            <div class="tab-subtoolbar">
+              <label class="check-chip">
+                <input type="checkbox" id="toggleCounterBeam">
+                <span>180° Counter-Beam Ghost</span>
+              </label>
+              <label class="check-chip">
+                <input type="checkbox" id="toggleProfileNozzle" checked>
+                <span>Show 2-Plane Nozzle Bore</span>
+              </label>
+            </div>
+            <canvas id="canvasProfile" aria-label="Trepanning Cross-Section Plot"></canvas>
+            <div class="canvas-hint">Drag to Pan | Scroll / Pinch to Zoom | Red = Ablation Core | Blue = 1/e² Waist | Purple = Target Hole Wall | Cyan = 2-Plane Nozzle Bore</div>
+            <div id="tableWrapProfile" class="summary-table-wrap" hidden></div>
+          </div>
+
+          <!-- Tab 2: Multi-Plane 3D Path & Contours -->
+          <div id="panelTopDown" class="canvas-tab-panel" role="tabpanel" aria-labelledby="tabTopDown" hidden>
+            <div class="tab-subtoolbar">
+              <label class="inline-select-label">
+                <span>Mode:</span>
+                <select id="selectTopDownMode" class="form-control form-control-sm">
+                  <option value="all" selected>All Combined</option>
+                  <option value="beam_path">Beam Path (Chart 3)</option>
+                  <option value="contour_1e2">1/e² Contour (Chart 4)</option>
+                  <option value="contour_ablation">Ablation Contour (Chart 5)</option>
+                </select>
+              </label>
+              <label class="check-chip">
+                <input type="checkbox" id="toggleNozzleRings" checked>
+                <span>Nozzle Aperture Rings</span>
+              </label>
+              <div class="orbit-scrubber">
+                <label for="sliderOrbitAngle">Orbit:</label>
+                <input type="range" id="sliderOrbitAngle" class="slider slider-sm" min="0" max="360" step="0.5" value="0">
+                <strong id="textOrbitAngle">0.0°</strong>
+              </div>
+            </div>
+            <div class="slice-toggles-bar" aria-label="Material Depth Slices">
+              <span class="slice-bar-label">Depth Slices:</span>
+              <label class="check-chip"><input type="checkbox" id="sliceToggle0" data-slice-plane="0" checked><span>Focus</span></label>
+              <label class="check-chip"><input type="checkbox" id="sliceToggle1" data-slice-plane="1" checked><span>Top</span></label>
+              <label class="check-chip"><input type="checkbox" id="sliceToggle2" data-slice-plane="2" checked><span>Top -25%</span></label>
+              <label class="check-chip"><input type="checkbox" id="sliceToggle3" data-slice-plane="3" checked><span>Top -50%</span></label>
+              <label class="check-chip"><input type="checkbox" id="sliceToggle4" data-slice-plane="4" checked><span>Top -75%</span></label>
+              <label class="check-chip"><input type="checkbox" id="sliceToggle5" data-slice-plane="5" checked><span>Bottom</span></label>
+            </div>
+            <canvas id="canvasTopDown" aria-label="Multi-Plane 3D Path and Contours Plot"></canvas>
+            <div class="canvas-hint">6 Z-Slice Planes (Focus through Bottom) | Inner Solid = Entrance | Outer Dashed = Exit | Cyan Rings = Exit Apertures 1 &amp; 2</div>
+            <div id="tableWrapTopDown" class="summary-table-wrap" hidden></div>
+          </div>
+
+          <!-- Tab 3: Isofluence Lines -->
+          <div id="panelIsofluence" class="canvas-tab-panel" role="tabpanel" aria-labelledby="tabIsofluence" hidden>
+            <div class="tab-subtoolbar iso-toolbar">
+              <label class="inline-select-label">
+                <span>Z From Focus (µm):</span>
+                <input type="number" id="isoZFromFocusMirror" class="form-control form-control-sm" value="0" step="25">
+              </label>
+              <div class="iso-toggles-grid" aria-label="Isofluence Contour Visibility">
+                <label class="check-chip"><input type="checkbox" data-iso-contour="waist" checked><span>1/e² w(z)</span></label>
+                <label class="check-chip"><input type="checkbox" data-iso-contour="ablation" checked><span>Ablation (I)</span></label>
+                <label class="check-chip"><input type="checkbox" data-iso-contour="thermalDamage" checked><span>Thermal (I/64)</span></label>
+                <label class="check-chip"><input type="checkbox" data-iso-contour="f0135" checked><span>0.135 I₀</span></label>
+                <label class="check-chip"><input type="checkbox" data-iso-contour="f020" checked><span>0.20 I₀</span></label>
+                <label class="check-chip"><input type="checkbox" data-iso-contour="f030" checked><span>0.30 I₀</span></label>
+                <label class="check-chip"><input type="checkbox" data-iso-contour="f040" checked><span>0.40 I₀</span></label>
+                <label class="check-chip"><input type="checkbox" data-iso-contour="f050" checked><span>0.50 I₀</span></label>
+                <label class="check-chip"><input type="checkbox" data-iso-contour="f070" checked><span>0.70 I₀</span></label>
+                <label class="check-chip"><input type="checkbox" data-iso-contour="f090" checked><span>0.90 I₀</span></label>
+              </div>
+            </div>
+            <canvas id="canvasIsofluence" aria-label="Isofluence Lines Plot"></canvas>
+            <div class="canvas-hint">Symmetric Axial Isofluence Contours (z ≥ 0) | Amber Dashed = Thermal Damage (I/64) | Red = Ablation Threshold | Vertical Marker = Z From Focus</div>
+            <div id="tableWrapIsofluence" class="summary-table-wrap" hidden></div>
+          </div>
+
+          <!-- Tab 4: Focus Energy Distribution -->
+          <div id="panelFluence" class="canvas-tab-panel" role="tabpanel" aria-labelledby="tabFluence" hidden>
+            <div class="tab-subtoolbar">
+              <label class="inline-select-label">
+                <span>Vertical Scale:</span>
+                <select id="selectFluenceUnit" class="form-control form-control-sm">
+                  <option value="normalized" selected>Normalized (F / F₀)</option>
+                  <option value="fluence">Fluence (J/cm²)</option>
+                </select>
+              </label>
+            </div>
+            <canvas id="canvasFluence" aria-label="Focus Energy Distribution Plot"></canvas>
+            <div class="canvas-hint">Blue Curve = Gaussian Spatial Profile (-3w₀ to +3w₀) | Red Shaded = Ablation Zone (F ≥ F_th) | Slate Shaded = Below Threshold | Red Dashed = Threshold</div>
+            <div id="tableWrapFluence" class="summary-table-wrap" hidden></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Diffraction-Limited Optical Calculations Grid -->
+      <section class="card metrics-card">
+        <h2 class="card-title">Diffraction-Limited Optics &amp; Process Outputs</h2>
+        <div class="metrics-grid">
+          <div class="metric-item">
+            <div class="metric-label">Pulse Energy (Base)</div>
+            <div class="metric-value" id="metricPulseEnergyBase">--</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Pulse Energy (Output)</div>
+            <div class="metric-value" id="metricPulseEnergyOutput">--</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Average Power</div>
+            <div class="metric-value" id="metricAveragePower">--</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Peak Power</div>
+            <div class="metric-value" id="metricPeakPower">--</div>
+          </div>
+          <div class="metric-item highlight">
+            <div class="metric-label">Spot Size (1/e²)</div>
+            <div class="metric-value" id="metricSpotSize">--</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Rayleigh Range (z_r)</div>
+            <div class="metric-value" id="metricRayleighRange">--</div>
+          </div>
+          <div class="metric-item highlight">
+            <div class="metric-label">Peak Fluence</div>
+            <div class="metric-value" id="metricPeakFluence">--</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Peak Irradiance</div>
+            <div class="metric-value" id="metricPeakIrradiance">--</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Average Irradiance</div>
+            <div class="metric-value" id="metricAverageIrradiance">--</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Scan Speed</div>
+            <div class="metric-value" id="metricScanSpeed">--</div>
+          </div>
+          <div class="metric-item highlight">
+            <div class="metric-label">Spot Overlap</div>
+            <div class="metric-value" id="metricSpotOverlap">--</div>
+          </div>
+          <div class="metric-item highlight">
+            <div class="metric-label">Ablated Spot ⌀ (at Focus)</div>
+            <div class="metric-value" id="metricAblatedSpot">--</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Ablated Spot ⌀ (at Z)</div>
+            <div class="metric-value" id="metricAblatedSpotAtZ">--</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Threshold Radius Ratio (r/w₀)</div>
+            <div class="metric-value" id="metricThresholdR">--</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">% Energy Above Thresh</div>
+            <div class="metric-value" id="metricEnergyAboveThresh">--</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Beam Divergence</div>
+            <div class="metric-value" id="metricBeamDivergence">--</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Exit Aperture 1 Max R</div>
+            <div class="metric-value" id="metricExitAperture1MaxR">--</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Exit Aperture 2 Max R</div>
+            <div class="metric-value" id="metricExitAperture2MaxR">--</div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Technical Guide Native Modal Dialog -->
+  <dialog id="guideModal" class="guide-dialog" closedby="any" aria-labelledby="guideModalTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 id="guideModalTitle">Laser Trepanning &amp; Ablation Technical Guide</h2>
+        <button type="button" id="btnCloseGuide" class="btn-close" aria-label="Close Technical Guide">&times;</button>
+      </div>
+      <div class="modal-body">
+        <h3>1. Overview &amp; Dimensions Guide</h3>
+        <p>This client-side engineering calculator models diffraction-limited Gaussian beam propagation, laser-material ablation boundaries, and 3D precession trepanning kinematics across all 9 reference workbook sheets inside an AssemblyScript WebAssembly / Web Worker physics engine.</p>
+
+        <div class="guide-figures-grid">
+          <figure class="guide-figure">
+            <svg viewBox="0 0 560 280" width="100%" role="img" aria-labelledby="svgHoleTitle svgHoleDesc" class="guide-svg">
+              <title id="svgHoleTitle">Trepanning Hole Geometry and Beam Kinematics</title>
+              <desc id="svgHoleDesc">Cross-section showing entrance diameter at Z=0, exit diameter at Z=thickness, Z-focus shift, effective scan radius r_focus, and attack angle theta.</desc>
+              <defs>
+                <marker id="arrowAccent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--accent)"/>
+                </marker>
+              </defs>
+              <polygon points="40,110 215,110 175,235 40,235" fill="var(--canvas-surface)" stroke="var(--border-strong)" stroke-width="1.5"/>
+              <polygon points="520,110 345,110 385,235 520,235" fill="var(--canvas-surface)" stroke="var(--border-strong)" stroke-width="1.5"/>
+              <line x1="215" y1="110" x2="175" y2="235" stroke="#a855f7" stroke-width="3"/>
+              <line x1="345" y1="110" x2="385" y2="235" stroke="#a855f7" stroke-width="3"/>
+              <line x1="280" y1="15" x2="280" y2="265" stroke="var(--text-muted)" stroke-width="1.2" stroke-dasharray="5 4"/>
+              <text x="286" y="28" fill="var(--text-secondary)" font-size="11">R = 0 Axis</text>
+              <line x1="30" y1="110" x2="530" y2="110" stroke="var(--text-muted)" stroke-width="1" stroke-dasharray="3 3"/>
+              <text x="48" y="103" fill="var(--text-secondary)" font-size="11">Part Surface (Z = 0)</text>
+              <text x="48" y="252" fill="var(--text-secondary)" font-size="11">Z = Material Thickness</text>
+              <polygon points="278,25 322,25 352,180 370,245 344,245 334,180" fill="rgba(56,189,248,0.22)" stroke="#38bdf8" stroke-width="1.5"/>
+              <polygon points="337,180 349,180 361,245 351,245" fill="rgba(239,68,68,0.38)" stroke="#ef4444" stroke-width="1.5"/>
+              <line x1="240" y1="180" x2="415" y2="180" stroke="var(--accent)" stroke-width="1.4" stroke-dasharray="4 3"/>
+              <circle cx="343" cy="180" r="4" fill="var(--accent)"/>
+              <text x="420" y="184" fill="var(--accent)" font-size="11" font-weight="600">Focus (Z_shift, r_focus)</text>
+              <line x1="280" y1="196" x2="343" y2="196" stroke="var(--accent)" stroke-width="1.3" marker-start="url(#arrowAccent)" marker-end="url(#arrowAccent)"/>
+              <text x="311" y="210" text-anchor="middle" fill="var(--accent)" font-size="11">r_focus</text>
+              <line x1="215" y1="95" x2="345" y2="95" stroke="#a855f7" stroke-width="1.4" marker-start="url(#arrowAccent)" marker-end="url(#arrowAccent)"/>
+              <text x="280" y="88" text-anchor="middle" fill="#a855f7" font-size="11" font-weight="600">Entrance Dia</text>
+              <line x1="175" y1="252" x2="385" y2="252" stroke="#c084fc" stroke-width="1.4" marker-start="url(#arrowAccent)" marker-end="url(#arrowAccent)"/>
+              <text x="280" y="268" text-anchor="middle" fill="#c084fc" font-size="11" font-weight="600">Exit Dia</text>
+              <path d="M 280 58 A 42 42 0 0 1 299 63" fill="none" stroke="#f59e0b" stroke-width="2"/>
+              <text x="303" y="57" fill="#f59e0b" font-size="12" font-weight="700">θ (AOI)</text>
+            </svg>
+            <figcaption class="text-muted small">Figure 1: Cross-section of tapered hole walls, Z-focus shift, effective scan radius, and attack angle θ.</figcaption>
+          </figure>
+
+          <figure class="guide-figure">
+            <svg viewBox="0 0 560 240" width="100%" role="img" aria-labelledby="svgNozzleTitle svgNozzleDesc" class="guide-svg">
+              <title id="svgNozzleTitle">2-Plane Nozzle Bore Clearance Schematic</title>
+              <desc id="svgNozzleDesc">Shows nozzle thickness, Exit Aperture 1 (top of bore), Exit Aperture 2 (nozzle tip), working distance WD above workpiece top, and aperture diameter D_nozzle.</desc>
+              <rect x="90" y="35" width="130" height="75" fill="var(--canvas-surface)" stroke="var(--border-strong)" stroke-width="1.5"/>
+              <rect x="340" y="35" width="130" height="75" fill="var(--canvas-surface)" stroke="var(--border-strong)" stroke-width="1.5"/>
+              <line x1="220" y1="35" x2="340" y2="35" stroke="#38bdf8" stroke-width="2" stroke-dasharray="5 3"/>
+              <line x1="220" y1="110" x2="340" y2="110" stroke="#38bdf8" stroke-width="2.5"/>
+              <text x="280" y="26" text-anchor="middle" fill="#38bdf8" font-size="11" font-weight="600">Exit Aperture 1 (Z_noz1)</text>
+              <text x="280" y="126" text-anchor="middle" fill="#38bdf8" font-size="11" font-weight="600">Exit Aperture 2 / Tip (Z_noz2)</text>
+              <polygon points="248,20 318,20 330,110 342,175 322,175 304,110 280,20" fill="rgba(56,189,248,0.18)" stroke="#38bdf8" stroke-width="1.4"/>
+              <rect x="60" y="175" width="180" height="40" fill="var(--canvas-surface)" stroke="var(--border-strong)" stroke-width="1.5"/>
+              <rect x="320" y="175" width="180" height="40" fill="var(--canvas-surface)" stroke="var(--border-strong)" stroke-width="1.5"/>
+              <text x="72" y="198" fill="var(--text-secondary)" font-size="11">Workpiece Top (Z = 0)</text>
+              <line x1="490" y1="35" x2="490" y2="110" stroke="var(--warning)" stroke-width="1.5"/>
+              <text x="498" y="76" fill="var(--warning)" font-size="11">t_noz</text>
+              <line x1="490" y1="110" x2="490" y2="175" stroke="var(--success)" stroke-width="1.5"/>
+              <text x="498" y="146" fill="var(--success)" font-size="11">WD</text>
+              <line x1="220" y1="74" x2="340" y2="74" stroke="var(--text-primary)" stroke-width="1.2" stroke-dasharray="2 2"/>
+              <text x="280" y="68" text-anchor="middle" fill="var(--text-primary)" font-size="11">D_nozzle</text>
+            </svg>
+            <figcaption class="text-muted small">Figure 2: Two-plane nozzle clipping check across Exit Aperture 1 (bore entry) and Exit Aperture 2 (nozzle tip).</figcaption>
+          </figure>
+        </div>
+
+        <h3>2. Coordinate Systems &amp; Units</h3>
+        <ul>
+          <li><strong>Scanlab PrecSYS:</strong> Uses diameter (µm) for XY positioning, true angle of incidence AOI in degrees (°), and Z focus position in µm (negative values shift focus toward workpiece).</li>
+          <li><strong>Arges Elephant v2:</strong> Uses radius (µm) for XY positioning, precession amplitude as a percentage (%) of maximum attack angle, and Z focus as a percentage (%) of maximum translation.</li>
+          <li><strong>Round Holes:</strong> Circular trepanning orbit with continuous angle of incidence.</li>
+          <li><strong>Square Holes (Polyline):</strong> Supported on Scanlab scanheads; scales AOI across corners/flats to preserve uniform corner geometry.</li>
+        </ul>
+
+        <h3>3. Governing Optical &amp; Clipping Equations</h3>
+        <div class="math-block">
+          <div class="math-caption">Diffraction-Limited Waist &amp; Rayleigh Range</div>
+          <math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+            <mrow>
+              <msub><mi>w</mi><mn>0</mn></msub>
+              <mo>=</mo>
+              <mfrac>
+                <mrow><mn>2</mn><mi>&#x03BB;</mi><msup><mi>M</mi><mn>2</mn></msup><mi>f</mi></mrow>
+                <mrow><mi>&#x03C0;</mi><msub><mi>D</mi><mtext>beam</mtext></msub></mrow>
+              </mfrac>
+              <mo>,</mo><mspace width="1.2em"/>
+              <msub><mi>z</mi><mi>R</mi></msub>
+              <mo>=</mo>
+              <mfrac>
+                <mrow><mi>&#x03C0;</mi><msup><mrow><mo>(</mo><msub><mi>w</mi><mn>0</mn></msub><mo>/</mo><msup><mi>M</mi><mn>2</mn></msup><mo>)</mo></mrow><mn>2</mn></msup></mrow>
+                <mi>&#x03BB;</mi>
+              </mfrac>
+            </mrow>
+          </math>
+        </div>
+
+        <div class="math-block">
+          <div class="math-caption">1/e² Beam Waist Envelope</div>
+          <math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+            <mrow>
+              <mi>w</mi><mo>(</mo><mi>z</mi><mo>)</mo>
+              <mo>=</mo>
+              <msub><mi>w</mi><mn>0</mn></msub>
+              <msqrt>
+                <mrow>
+                  <mn>1</mn><mo>+</mo>
+                  <msup>
+                    <mrow><mo>(</mo><mfrac><mi>z</mi><msub><mi>z</mi><mi>R</mi></msub></mfrac><mo>)</mo></mrow>
+                    <mn>2</mn>
+                  </msup>
+                </mrow>
+              </msqrt>
+            </mrow>
+          </math>
+        </div>
+
+        <div class="math-block">
+          <div class="math-caption">Peak Fluence &amp; Ablation Radius</div>
+          <math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+            <mrow>
+              <msub><mi>F</mi><mn>0</mn></msub>
+              <mo>=</mo>
+              <mfrac>
+                <mrow><mn>2</mn><msub><mi>E</mi><mtext>out</mtext></msub></mrow>
+                <mrow><mi>&#x03C0;</mi><msubsup><mi>w</mi><mn>0</mn><mn>2</mn></msubsup></mrow>
+              </mfrac>
+              <mo>,</mo><mspace width="1.2em"/>
+              <msub><mi>r</mi><mtext>abl</mtext></msub><mo>(</mo><mi>z</mi><mo>)</mo>
+              <mo>=</mo>
+              <mi>w</mi><mo>(</mo><mi>z</mi><mo>)</mo>
+              <msqrt>
+                <mrow>
+                  <mfrac><mn>1</mn><mn>2</mn></mfrac>
+                  <mi>ln</mi>
+                  <mrow><mo>(</mo><mfrac><mrow><mi>F</mi><mo>(</mo><mn>0</mn><mo>,</mo><mi>z</mi><mo>)</mo></mrow><msub><mi>F</mi><mtext>th</mtext></msub></mfrac><mo>)</mo></mrow>
+                </mrow>
+              </msqrt>
+            </mrow>
+          </math>
+        </div>
+
+        <div class="math-block">
+          <div class="math-caption">2-Plane Nozzle Clipping Criterion</div>
+          <math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+            <mrow>
+              <mi>max</mi><mo>(</mo><msub><mi>R</mi><mtext>Exit 1</mtext></msub><mo>,</mo><msub><mi>R</mi><mtext>Exit 2</mtext></msub><mo>)</mo>
+              <mo>&#x2265;</mo>
+              <mfrac><msub><mi>D</mi><mtext>nozzle</mtext></msub><mn>2</mn>
+            </mfrac>
+            </mrow>
+          </math>
+        </div>
+
+        <h3>4. State Transition Mode &amp; Safety Heatmap</h3>
+        <p>In <strong>State Transition</strong> mode, the engine sweeps all 101 interpolation points (0% to 100%) from Start State to End State and renders a live Safety Heatmap strip under the progress scrubber (<span class="text-success">Green = Safe</span>, <span class="text-warning">Amber = Wall Overcut</span>, <span class="text-danger">Red = Nozzle Clipping</span>).</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="btnCloseGuideFooter" class="btn btn-primary">Close Guide</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Dismissible Non-Blocking Toast Notifications -->
+  <div id="toastRegion" popover="manual" role="status" aria-live="polite" class="toast-region"></div>
+
+  <script type="module" src="./src/app.ts"></script>
+</body>
+</html>

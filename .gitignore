@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+
+# Build & Vite outputs
+dist/
+.vite/
+*.tsbuildinfo
+
+# Compiled WASM binary (rebuilt via npm run build:wasm and in CI)
+src/wasm/engine.wasm
+src/wasm/engine.wasm.map
+src/wasm/engine.wat
+src/wasm/engine.js
+src/wasm/engine.d.ts
+
+# Local Excel reference workbook & lock files (NEVER commit or deploy)
+*.xlsx
+~$*.xlsx
+
+# Temporary local inspection scripts & JSON/text dumps (NEVER commit or deploy)
+inspect_*.py
+dump_specs.py
+test_math.py
+main_cells.txt
+defined_names.json
+sheet_*.json
+
+# Test coverage & E2E artifacts
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Local environment & logs
+.env*
+*.log
+npm-debug.log*
+
+# OS & editor cruft
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
