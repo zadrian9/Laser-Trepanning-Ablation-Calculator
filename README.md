@@ -100,3 +100,9 @@ To enable hosting on GitHub:
 ├── style.css
 └── vite.config.ts
 ```
+
+---
+
+## License
+
+This project is licensed under the GNU Affero General Public License v3.0. See [LICENSE](LICENSE) for details.
