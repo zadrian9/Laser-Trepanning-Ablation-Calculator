@@ -1,8 +1,18 @@
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+function resolveBasePath(): string {
+  const raw = (process.env.VITE_BASE_PATH || process.env.BASE_PATH || '').trim();
+  if (!raw || raw === './') return './';
+  if (raw === '/') return '/';
+  const trimmed = raw.replace(/^\/+|\/+$/g, '');
+  return trimmed ? `/${trimmed}/` : '/';
+}
+
+const basePath = resolveBasePath();
+
 export default defineConfig({
-  base: './',
+  base: basePath,
   build: {
     target: 'esnext',
   },
@@ -12,22 +22,14 @@ export default defineConfig({
   plugins: [
     VitePWA({
       registerType: 'prompt',
-      includeAssets: [
-        'favicon.svg',
-        'icon.svg',
-        'apple-touch-icon-180x180.png',
-        'pwa-192x192.png',
-        'pwa-512x512.png',
-        'pwa-maskable-512x512.png',
-      ],
       manifest: {
-        id: './',
+        id: basePath,
         name: 'Laser Trepanning & Ablation Calculator',
         short_name: 'LaserTrepan',
         description:
           'Diffraction-limited Gaussian beam optics, ablation threshold, and 3D precession trepanning calculator.',
-        start_url: './',
-        scope: './',
+        start_url: basePath,
+        scope: basePath,
         display: 'standalone',
         theme_color: '#0f172a',
         background_color: '#0f172a',
@@ -54,6 +56,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,wasm,svg,png,webmanifest}'],
+        globIgnores: ['pwa-*.png', 'manifest.webmanifest'],
         cleanupOutdatedCaches: true,
       },
     }),

@@ -41,6 +41,8 @@ jobs:
         run: npm test
 
       - name: Build static site & PWA
+        env:
+          VITE_BASE_PATH: /${{ github.event.repository.name }}/
         run: npm run build
 
       - name: Configure GitHub Pages

@@ -36,9 +36,11 @@ describe('Tier 1 & Tier 2 — F1 Build/Repo/CI & F2 PWA Artifacts', () => {
     expect(opts.noEmit).toBe(true);
   });
 
-  it('T1-F1-02: vite.config.ts and dist/index.html use relative ./ base and ESNext/ES worker targets', () => {
+  it('T1-F1-02: vite.config.ts and dist/index.html use relative ./ default base (with VITE_BASE_PATH override) and ESNext/ES worker targets', () => {
     const viteConfig = fs.readFileSync(resolveWorkspacePath('vite.config.ts'), 'utf8');
-    expect(viteConfig).toMatch(/base:\s*['"]\.\/['"]/);
+    expect(viteConfig).toMatch(/VITE_BASE_PATH/);
+    expect(viteConfig).toMatch(/return\s*['"]\.\/['"]/);
+    expect(viteConfig).toMatch(/base:\s*basePath/);
     expect(viteConfig).toMatch(/target:\s*['"]esnext['"]/);
     expect(viteConfig).toMatch(/format:\s*['"]es['"]/);
 
